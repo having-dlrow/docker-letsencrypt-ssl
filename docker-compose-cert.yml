@@ -1,0 +1,51 @@
+version: '3'
+
+networks:
+  coin-network:
+    driver: bridge
+
+services:
+
+  certbot:
+    container_name: certbot  
+    image: certbot/dns-cloudflare:v2.9.0
+    environment:
+      - DOMAIN=ha-ving.store    
+    command: certonly --dns-cloudflare --dns-cloudflare-credentials /var/cloudflare/credentials -d *.${DOMAIN} -d ${DOMAIN} --preferred-challenges dns-01
+    volumes:
+        - ./cloudflare:/var/cloudflare
+        - ./certs/etc/letsencrypt:/etc/letsencrypt
+        - ./certs/log/letsencrypt:/var/log/letsencrypt
+
+  certbot-renew:
+    container_name: certbot-renew  
+    image: certbot/dns-cloudflare:v2.9.0
+    command: renew --quiet
+    # command: renew --dry-run  # configuration test
+    volumes:
+        - ./cloudflare:/var/cloudflare
+        - ./certs/etc/letsencrypt:/etc/letsencrypt
+        - ./certs/log/letsencrypt:/var/log/letsencrypt
+
+  # certbot:
+  #   container_name: certbot   
+  #   image: certbot/certbot:latest
+  #   command: certonly --webroot --webroot-path=/var/lib/letsencrypt --email myemail@google.com --agree-tos --no-eff-email -d domain.com
+  #   volumes:
+  #       - ./certs/etc/letsencrypt:/etc/letsencrypt
+  #       - ./certs/var/lib/letsencrypt:/var/lib/letsencrypt
+  #   depends_on:
+  #     - nginx           
+
+  nginx:
+    container_name: nginx
+    image: nginx:1.22.1
+    restart: always
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./certs/etc/letsencrypt:/etc/letsencrypt
+    environment: 
+     - TZ=Asia/Seoul                 
